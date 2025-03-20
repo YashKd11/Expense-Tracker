@@ -1,0 +1,101 @@
+<html>
+
+<head>
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+  <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+    href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Work+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+  <title>Expense tracker</title>
+  <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+  <div class="relative flex size-full min-h-screen flex-col bg-[#141414] dark group/design-root overflow-x-hidden"
+    style='font-family: "Work Sans", "Noto Sans", sans-serif;'>
+    <div class="layout-container flex h-full grow flex-col">
+      <header
+        class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#303030] px-10 py-3">
+        <div class="flex items-center gap-4 text-white">
+          <div class="size-4">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"
+                fill="currentColor"></path>
+            </svg>
+          </div>
+          <a href="/" class="text-white text-xl font-bold leading-tight tracking-[-0.015em]">Spendwise</a>
+        </div>
+        <div class="flex flex-1 justify-end gap-8">
+          <div class="flex items-center gap-9">
+            <a class="text-white text-md font-medium leading-normal" href="/add">Add</a>
+            <a class="text-black text-center rounded-md bg-white px-4 font-medium leading-normal"
+              href="/login">Login</a>
+            <a class="text-black text-center rounded-md bg-white px-4 font-medium leading-normal"
+              href="/register">Register</a>
+          </div>
+        </div>
+      </header>
+      <div class="px-40 flex flex-1 justify-center py-5">
+        <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+          <div class="flex flex-wrap justify-between gap-3 p-4">
+            <p class="text-white tracking-light text-[32px] font-bold leading-tight min-w-72">Spendwise.io</p>
+            <a href="/add">
+              <button
+                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#303030] text-white text-sm font-medium leading-normal">
+                <span class="text-lg py-4 px-6 tracking-tighter">Add expense</span>
+              </button>
+            </a>
+          </div>
+          
+          {% if pie_chart_url == none %}
+            <div class="flex border-2 border-dashed border-[#303030] h-1/2 w-full bg-transparent rounded-lg justify-center items-center">
+              <h1 class="text-white text-3xl tracking-tighter">Enter expenses to start</h1>
+            </div>
+          {% else %}
+            <img src="data:image/png;base64,{{ pie_chart_url }}" alt="Expenses by Category" />
+          {% endif %}
+
+          <div class="text-white text-3xl font-bold leading-tight tracking-[-0.015em] my-2">
+            <h1>Your expenses</h1>
+          </div>
+
+          <div class="expense-table text-white w-full min-h-1/2 rounded-xl">
+            {% if expenses|length == 0 %}
+            <div
+              class="w-full h-64 text-2xl font-bold text-white rounded-xl flex flex-col justify-center items-center border-2 border-[#474747]">
+              <h1>No records !!</h1>
+              <p class="font-light">Try adding new records by clicking on new expense or new in the nav bar</p>
+            </div>
+
+            {% else %}
+            <table class="w-full">
+              <thead class="border-b-2 border-[#474747]">
+                <tr class="w-full h-10">
+                  <th class="text-white py-4 text-left">Sno</th>
+                  <th class="text-white py-4 text-left">Amount</th>
+                  <th class="text-white py-4 text-left">Date</th>
+                  <th class="text-white py-4 text-left">Category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for exp in expenses %}
+                <tr class="w-full h-10">
+                  <td class="text-white p-4 w-1/4">{{loop.index}}</td>
+                  <td class="text-white p-4 w-1/4">{{exp.amount}}</td>
+                  <td class="text-white p-4 w-1/4">{{exp.date}}</td>
+                  <td class="text-white p-4 w-1/4">{{exp.category}}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

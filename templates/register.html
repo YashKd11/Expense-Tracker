@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register -   Expense Tracker</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+<body class="bg-[#141414] flex items-center justify-center h-screen w-screen">
+    <form action="/" method="post" class="h-[80%] w-1/2 bg-[#303030]/30 flex flex-col border-2 border-[#303030] rounded-lg p-8">
+        <h1 class="text-5xl text-white tracking-tighter font-bold mb-12">Register</h1>
+        <label class="text-white m-2 text-lg" for="name">Name</label>
+        <input class="w-full bg-[#303030] rounded-md tracking-tighter mb-4" type="text" name="name" id="name" placeholder="Joke Gyllenhaal">
+        <label class="text-white m-2 text-lg" for="email">Email address</label>
+        <input class="w-full bg-[#303030] rounded-md tracking-tighter mb-4" type="text" name="email" id="email" placeholder="forexample@gmail.com">
+        <label class="text-white m-2 text-lg" for="password">Create password</label>
+        <input class="w-full bg-[#303030] rounded-md tracking-tighter text-white" type="password" name="password" id="name">
+        <a class="text-white m-2 text-lg mt-5" href="/login">Already have an account?<u> Click to login</u></a>
+        <button class="bg-black w-full h-16 rounded-md text-white font-bold" type="submit">Create Account</button>
+    </form>
+</body>
+</html>
