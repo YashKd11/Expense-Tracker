@@ -1,141 +1,170 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import io
-import base64
-from flask import Flask, render_template, request, session, redirect
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-import bcrypt
-import os
+from flask import Flask, render_template, request, redirect, flash, url_for #type: ignore
+from flask_sqlalchemy import SQLAlchemy #type: ignore
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user #type: ignore
+from werkzeug.security import generate_password_hash, check_password_hash #type: ignore
+from datetime import date, timedelta, datetime
+
 
 app = Flask(__name__)
-
-app.secret_key = os.urandom(24)
-
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'expenses.db')
+app.secret_key = 'jajantaramMamamantaram'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-app.config['SQLALCHEMY_BINDS'] = {
-    'secondary': 'sqlite:///user.db'
-}
+db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
-db1 = SQLAlchemy(app)
-
-class Expense(db1.Model):
-    id = db1.Column(db1.Integer, primary_key=True)
-    amount = db1.Column(db1.Float, nullable=False)
-    date = db1.Column(db1.DateTime, nullable=False, default=datetime.utcnow)
-    category = db1.Column(db1.String(50), nullable=False)
-    note = db1.Column(db1.String(200))
+class Expense(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    category = db.Column(db.String(50), nullable=False)
+    note = db.Column(db.String(200))    
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     def __repr__(self):
         return f"Expense('{self.amount}', '{self.category}')"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'category': self.category,
+            'amount': self.amount,
+            'date':self.date.strftime('%d-%m-%Y')
+        }
 
-class User(db1.Model):
-    __bind_key__ = 'secondary'
-    id = db1.Column(db1.Integer, primary_key=True)
-    name = db1.Column(db1.String(50), nullable=False)
-    email = db1.Column(db1.String(150), unique=True)
-    password = db1.Column(db1.String(200), nullable=False)
+class User(UserMixin ,db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(150), unique=True)
+    password = db.Column(db.String(200), nullable=False)
+    expenses = db.relationship('Expense', backref='user', lazy=True)
 
-    def __init__(self, name, email, password):
-        self.name = name
-        self.email = email
-        self.password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+def dash_func(expenses):
+    category_totals = {}
+    for e in expenses:
+        cat = e['category']
+        amt = e['amount']
 
-    def check_password(self, password):
-        return bcrypt.checkpw(self.password.encode('utf-8'), password.encode('utf-8'))
+        category_totals[cat] = category_totals.get(cat, 0) + amt
+    return category_totals
+
 
 with app.app_context():
-    db1.create_all()
+    db.create_all()
 
-def create_3d_pie_chart(expenses):
-    category_totals = {}
 
-    if len(expenses) == 0:
-        return None
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-    for expense in expenses:
-        if expense.category in category_totals:
-            category_totals[expense.category] += expense.amount
-        else:
-            category_totals[expense.category] = expense.amount
+@app.route('/logout',methods=['POST','GET'])
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
-    labels = list(category_totals.keys())
-    sizes = list(category_totals.values())
-
-    colors = ['#3f3f3f', '#2f2f2f', '#202020', '#ffcc99', '#c2c2f0']
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-
-    wedges, texts, autotexts = ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=0, colors=colors, shadow=True, wedgeprops={'edgecolor': 'black'})
-
-    ax.axis('equal')
-
-    img = io.BytesIO()
-    fig.savefig(img, format='png')
-    img.seek(0)
-
-    chart_url = base64.b64encode(img.getvalue()).decode('utf8')
-    return chart_url
-
-@app.route('/', methods=['POST', 'GET'])
-def home():
-    expenses = Expense.query.all()
-
-    pie_chart_url = create_3d_pie_chart(expenses)
-
-    return render_template('index.html', expenses=expenses, pie_chart_url=pie_chart_url)
-
-@app.route('/register', methods=['POST', 'GET'])
-def register():
-    if request.method == 'POST':
-        name = request.form['name']
-        email = request.form['email']
-        password = request.form['password']
-
-        if User.query.filter_by(email=email).first():
-            return render_template('register.html', error="Email already exists")
-
-        new_user = User(name=name, email=email, password=password)
-        db1.session.add(new_user)
-        db1.session.commit()
-
-        return redirect('/login')
-    return render_template('register.html')
-
-@app.route('/login', methods=['POST', 'GET'])
+@app.route('/', methods=['POST','GET'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        email = request.form.get('email')
+        password = request.form.get('password')
 
         user = User.query.filter_by(email=email).first()
 
-        if user and user.check_password(password):
-            session['name'] = user.name
-            return redirect('/')
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('dashboard'))
         else:
-            return render_template('login.html', error="Invalid credentials")
+            flash('Invlaid Email or password')
+            return redirect(url_for('login'))
+
     return render_template('login.html')
 
-@app.route('/logout')
-def logout():
-    session.pop('name', None)
-    return redirect('/login')
+
+@app.route('/dashboard', methods=['GET','POST'])
+@login_required
+def dashboard():
+    timeSpan = request.args.get('range', '')
+    query = Expense.query.filter_by(user_id=current_user.id)
+    today = date.today()
+
+    if timeSpan == 'today':
+        start = datetime.combine(today, datetime.min.time())
+        end = datetime.combine(today, datetime.max.time())
+        query = query.filter(Expense.date >= start, Expense.date <= end)
+
+    elif timeSpan == 'week':
+        week_ago = today - timedelta(days=7)
+        query = query.filter(Expense.date >= week_ago)
+
+    elif timeSpan == 'month':
+        month_ago = today - timedelta(days=30)
+        query = query.filter(Expense.date >= month_ago)
+
+    data = [e.to_dict() for e in query]
+    category_totals = dash_func(data)
+
+    if category_totals:
+        max_key = max(category_totals, key=category_totals.get)
+        max_val = category_totals[max_key]
+    else:
+        max_key = "N/A"
+        max_val = 0
+
+    return render_template('dashboard.html',
+                           category=max_key,
+                           value=max_val,
+                           data=data,
+                           selected_range=timeSpan)
+
 
 @app.route('/add', methods=['POST', 'GET'])
+@login_required
 def add_expense():
     if request.method == 'POST':
         amount = float(request.form['amount'])
         category = request.form['category']
         note = request.form['note']
-        new_expense = Expense(amount=amount, category=category, note=note)
-        db1.session.add(new_expense)
-        db1.session.commit()
+        new_expense = Expense(amount=amount, category=category, note=note, user_id=current_user.id)
+        db.session.add(new_expense)
+        db.session.commit()
 
-    return render_template('add.html', expenses=Expense.query.all())
+    return render_template('add.html')
+
+@app.route('/register', methods=['POST','GET'])
+def register():
+    if request.method == 'POST':
+        username = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+
+        if User.query.filter_by(name=username).first():
+            flash("User Already Exists ")
+            return render_template('login.html')
+        hash = generate_password_hash(password)
+        new_user = User(name=username, email=email, password=hash)
+        db.session.add(new_user)
+        db.session.commit()
+        flash("Registration Successfull ")
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+@app.route('/reports')
+@login_required
+def reports():
+    return render_template('reports.html')
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
